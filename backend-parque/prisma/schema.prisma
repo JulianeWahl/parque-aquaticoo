@@ -1,0 +1,164 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RoleNome {
+  ADMIN
+  FUNCIONARIO
+}
+
+enum ModuloNome {
+  ENTRADA
+  LANCHONETE
+}
+
+enum PedidoStatus {
+  EM_PREPARO
+  ENTREGUE
+  CANCELADO
+}
+
+enum MetodoPagamento {
+  DINHEIRO
+  PIX
+  CARTAO
+  CREDITO
+  DEBITO
+}
+
+enum StatusPagamento {
+  PENDENTE
+  APROVADO
+  RECUSADO
+}
+
+model Usuario {
+  id        Int      @id @default(autoincrement())
+  nome      String
+  email     String   @unique
+  senha     String
+  roleId    Int
+  role      Role     @relation(fields: [roleId], references: [id])
+  vendas    Venda[]
+  createdAt DateTime @default(now())
+}
+
+model Role {
+  id       Int        @id @default(autoincrement())
+  nome     RoleNome
+  modulo   ModuloNome
+  usuarios Usuario[]
+}
+
+model Ingresso {
+  id            Int             @id @default(autoincrement())
+  categoria     String
+  preco         Float
+  ativo         Boolean         @default(true)
+  VendaIngresso VendaIngresso[]
+}
+
+model Cupom {
+  id          Int         @id @default(autoincrement())
+  codigo      String      @unique
+  desconto    Float
+  validadeAte DateTime
+  ativo       Boolean     @default(true)
+  modulo      ModuloNome?
+  vendas      Venda[]
+}
+
+model Venda {
+  id          Int             @id @default(autoincrement())
+  data        DateTime        @default(now())
+  total       Float
+  nomeCliente String?
+  modulo      ModuloNome? 
+  usuarioId   Int
+  usuario     Usuario         @relation(fields: [usuarioId], references: [id])
+  cupomId     Int?
+  cupom       Cupom?          @relation(fields: [cupomId], references: [id])
+  ingressos   VendaIngresso[]
+  produtos    VendaProduto[]
+  pagamento   Pagamento?
+}
+
+model VendaIngresso {
+  id         Int      @id @default(autoincrement())
+  vendaId    Int
+  venda      Venda    @relation(fields: [vendaId], references: [id])
+  ingressoId Int
+  ingresso   Ingresso @relation(fields: [ingressoId], references: [id])
+  quantidade Int
+}
+
+model Produto {
+  id             Int              @id @default(autoincrement())
+  nome           String
+  preco          Float
+  estoque        Int
+  estoqueMinimo  Int
+  precisaPreparo Boolean
+  ativo          Boolean          @default(true)
+  categoriaId    Int
+  categoria      CategoriaProduto @relation(fields: [categoriaId], references: [id])
+  marcaId        Int?
+  marca          MarcaProduto?    @relation(fields: [marcaId], references: [id])
+  vendas         VendaProduto[]
+  reposicoes     Reposicao[]
+}
+
+model VendaProduto {
+  id         Int            @id @default(autoincrement())
+  vendaId    Int
+  venda      Venda          @relation(fields: [vendaId], references: [id])
+  produtoId  Int
+  produto    Produto        @relation(fields: [produtoId], references: [id])
+  quantidade Int
+  pedido     PedidoCozinha?
+}
+
+model PedidoCozinha {
+  id             Int          @id @default(autoincrement())
+  vendaProdutoId Int          @unique
+  vendaProduto   VendaProduto @relation(fields: [vendaProdutoId], references: [id])
+  status         PedidoStatus
+  quantidade     Int
+  data           DateTime     @default(now())
+}
+
+model Reposicao {
+  id         Int      @id @default(autoincrement())
+  produtoId  Int
+  produto    Produto  @relation(fields: [produtoId], references: [id])
+  quantidade Int
+  motivo     String
+  data       DateTime @default(now())
+}
+
+model Pagamento {
+  id              Int             @id @default(autoincrement())
+  vendaId         Int             @unique
+  venda           Venda           @relation(fields: [vendaId], references: [id])
+  metodoPagamento MetodoPagamento
+  valorPago       Float
+  transacaoId     String?
+  status          StatusPagamento
+}
+
+model CategoriaProduto {
+  id       Int       @id @default(autoincrement())
+  nome     String    @unique
+  produtos Produto[]
+}
+
+model MarcaProduto {
+  id       Int       @id @default(autoincrement())
+  nome     String    @unique
+  produtos Produto[]
+}
