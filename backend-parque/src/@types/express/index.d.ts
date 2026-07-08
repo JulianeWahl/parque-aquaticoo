@@ -3,7 +3,7 @@ declare namespace Express {
     user?: {
       id: number;
       role: "ADMIN" | "FUNCIONARIO";
-      modulo: "ENTRADA" | "LANCHONETE";
+      module: "ENTRADA" | "LANCHONETE";
     };
   }
 }

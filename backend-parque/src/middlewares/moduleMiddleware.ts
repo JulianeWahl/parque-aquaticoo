@@ -10,7 +10,7 @@ export function moduleMiddleware(modulo: "ENTRADA" | "LANCHONETE") {
       });
     }
 
-    if (user.modulo !== modulo) {
+    if (user.module !== modulo) {
       return res.status(403).json({
         error: "Acesso negado para este módulo"
       });

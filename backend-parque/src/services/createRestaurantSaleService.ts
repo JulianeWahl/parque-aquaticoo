@@ -1,7 +1,7 @@
 import { prisma } from "../lib/prisma";
-import { ValidateRestaurantItemsService } from "./validateRestaurantItemsService";
 import { ApplyCouponRestaurantService } from "./applyCouponRestaurantService";
 import { CreatePaymentSaleService } from "./createPaymentSaleService";
+import { printKitchenTicket } from "../utils/kitchenTicket";
 
 export class CreateRestaurantSaleService {
   async execute(data: any) {
@@ -10,87 +10,115 @@ export class CreateRestaurantSaleService {
       usuarioId,
       cupomCodigo,
       metodoPagamento,
-      itens
+      statusPagamento,
+      itens,
     } = data;
 
-    if (!itens || itens.length === 0) {
-      throw new Error("Itens obrigatórios");
+    if (!itens || itens.length === 0) throw new Error("Itens obrigatórios");
+
+    const userIdNum = Number(usuarioId);
+    if (!userIdNum || isNaN(userIdNum)) throw new Error("usuarioId inválido");
+
+    const usuario = await prisma.usuario.findUnique({ where: { id: userIdNum } });
+    if (!usuario) throw new Error("Usuário não encontrado");
+
+    // ── Validate items + compute total ────────────────────────
+    let total = 0;
+    for (const item of itens) {
+      const produtoId = Number(item.produtoId);
+      const quantidade = Number(item.quantidade);
+
+      if (!produtoId || isNaN(produtoId)) throw new Error(`produtoId inválido: ${item.produtoId}`);
+      if (!quantidade || isNaN(quantidade) || quantidade <= 0) throw new Error(`quantidade inválida`);
+
+      const produto = await prisma.produto.findUnique({ where: { id: produtoId } });
+      if (!produto || !produto.ativo) throw new Error(`Produto inválido (id=${produtoId})`);
+      if (produto.estoque < quantidade) {
+        throw new Error(`Estoque insuficiente para "${produto.nome}": disponível ${produto.estoque}, solicitado ${quantidade}`);
+      }
+      total += produto.preco * quantidade;
     }
 
-    const usuario = await prisma.usuario.findUnique({
-      where: { id: usuarioId }
-    });
-
-    if (!usuario) {
-      throw new Error("Usuário não encontrado");
-    }
-
-    // 🔥 valida e calcula total
-    const validate = new ValidateRestaurantItemsService();
-    let total = await validate.execute(itens);
-
-    // 🎟️ CUPOM
-    const coupon = new ApplyCouponRestaurantService();
-    const resultCoupon = await coupon.execute(cupomCodigo, total);
-
+    // ── Coupon ────────────────────────────────────────────────
+    const couponSvc = new ApplyCouponRestaurantService();
+    const resultCoupon = await couponSvc.execute(cupomCodigo, total);
     total = resultCoupon.total;
 
-    // 🍔 VENDA COM MÓDULO
+    // ── Venda ─────────────────────────────────────────────────
     const venda = await prisma.venda.create({
       data: {
-        nomeCliente: cliente,
+        nomeCliente: cliente ?? null,
         total,
-        usuarioId,
+        usuarioId: userIdNum,
         cupomId: resultCoupon.cupomId,
-        modulo: "LANCHONETE" // 👈 ESSENCIAL
-      }
+        modulo: "LANCHONETE",
+      },
     });
 
-    // 🍟 ITENS
+    // ── Collect kitchen items for ticket generation ───────────
+    const kitchenItems: Array<{ nome: string; quantidade: number; observacao?: string | null }> = [];
+
+    // ── Items + stock deduction + kitchen orders ──────────────
     for (const item of itens) {
-      const produto = await prisma.produto.findUnique({
-        where: { id: item.produtoId }
-      });
+      const produtoId = Number(item.produtoId);
+      const quantidade = Number(item.quantidade);
+      const observacao = item.observacao ?? null;
 
-      if (!produto || !produto.ativo) {
-        throw new Error("Produto inválido");
-      }
-
-      if (produto.estoque < item.quantidade) {
-        throw new Error(`Estoque insuficiente para ${produto.nome}`);
-      }
+      const produto = await prisma.produto.findUnique({ where: { id: produtoId } });
+      if (!produto) throw new Error(`Produto ${produtoId} não encontrado`);
 
       const vendaProduto = await prisma.vendaProduto.create({
         data: {
           vendaId: venda.id,
-          produtoId: item.produtoId,
-          quantidade: item.quantidade
-        }
+          produtoId,
+          quantidade,
+          // observacao requires migration: add "observacao String?" to VendaProduto in schema
+          // If migration not yet applied, comment out the line below:
+          ...(observacao !== null ? { observacao } : {}),
+        },
       });
 
-      // 📦 baixa estoque
+      // Deduct stock
       await prisma.produto.update({
-        where: { id: item.produtoId },
-        data: {
-          estoque: produto.estoque - item.quantidade
-        }
+        where: { id: produtoId },
+        data: { estoque: produto.estoque - quantidade },
       });
 
-      // 👨‍🍳 cozinha
+      // Only products with precisaPreparo go to kitchen
       if (produto.precisaPreparo) {
         await prisma.pedidoCozinha.create({
           data: {
             vendaProdutoId: vendaProduto.id,
-            quantidade: item.quantidade,
-            status: "EM_PREPARO"
-          }
+            quantidade,
+            status: "EM_PREPARO",
+            // If migration applied:
+            ...(observacao !== null ? { observacao } : {}),
+          },
         });
+
+        kitchenItems.push({ nome: produto.nome, quantidade, observacao });
       }
     }
 
-    // 💰 PAGAMENTO
-    const payment = new CreatePaymentSaleService();
-    await payment.execute(venda.id, metodoPagamento, total);
+    // ── Payment ───────────────────────────────────────────────
+    const paymentSvc = new CreatePaymentSaleService();
+    await paymentSvc.execute(venda.id, metodoPagamento, total, statusPagamento);
+
+    // ── Generate + print kitchen ticket (non-blocking) ────────
+    // Only print if there are items that need kitchen preparation
+    if (kitchenItems.length > 0) {
+      printKitchenTicket({
+        pedidoId: venda.id,
+        nomeCliente: cliente ?? null,
+        itens: kitchenItems,
+        statusPagamento: statusPagamento ?? "APROVADO",
+        metodoPagamento,
+        hora: new Date(),
+      }).catch(err => {
+        // Never fail the sale due to printer error
+        console.error("[KITCHEN TICKET ERROR]", err);
+      });
+    }
 
     return venda;
   }

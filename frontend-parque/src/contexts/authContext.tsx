@@ -1,73 +1,57 @@
-import { createContext, useEffect, useState } from "react";
-import { api } from "../api/axios";
+import React, { createContext, useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { login as loginApi, getMe } from "../api/auth";
+import { getToken, setToken, removeToken } from "../utils/token";
+import { getHomeRoute, canAccessRelatorios } from "../utils/role";
+import type { AuthContextData, LoginPayload, Module, User } from "../types/auth";
 
-type User = {
-  id: number;
-  role: string;
-  modulo: string;
-};
+export const AuthContext = createContext<AuthContextData>({} as AuthContextData);
 
-type AuthContextData = {
-  user: User | null;
-  token: string | null;
-  login: (email: string, senha: string) => Promise<void>;
-  logout: () => void;
-  isAuthenticated: boolean;
-};
-
-export const AuthContext = createContext<AuthContextData>(
-  {} as AuthContextData
-);
-
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [token, setToken] = useState<string | null>(() =>
-    localStorage.getItem("token")
-  );
-
-  const [user, setUser] = useState<User | null>(() => {
-    const savedUser = localStorage.getItem("user");
-    return savedUser ? JSON.parse(savedUser) : null;
-  });
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    if (token) {
-      api.defaults.headers.common.Authorization = `Bearer ${token}`;
-    }
-  }, [token]);
+    const token = getToken();
+    if (!token) { setLoading(false); return; }
+    getMe()
+      .then(({ user }) => setUser(user))
+      .catch(() => removeToken())
+      .finally(() => setLoading(false));
+  }, []);
 
-  async function login(email: string, senha: string) {
-    const response = await api.post("/login", { email, senha });
-
-    const { token, user } = response.data;
-
+  const signIn = useCallback(async (payload: LoginPayload) => {
+    const { token } = await loginApi(payload);
     setToken(token);
+    const { user } = await getMe();
     setUser(user);
+    navigate(getHomeRoute(user.role, user.module), { replace: true });
+  }, [navigate]);
 
-    localStorage.setItem("token", token);
-    localStorage.setItem("user", JSON.stringify(user));
-
-    api.defaults.headers.common.Authorization = `Bearer ${token}`;
-  }
-
-  function logout() {
-    setToken(null);
+  const signOut = useCallback(() => {
+    removeToken();
     setUser(null);
+    navigate("/login", { replace: true });
+  }, [navigate]);
 
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-  }
+  const hasModule = useCallback((mod: Module): boolean => {
+    if (!user) return false;
+    return user.module === mod;
+  }, [user]);
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        token,
-        login,
-        logout,
-        isAuthenticated: !!token,
-      }}
-    >
+    <AuthContext.Provider value={{
+      user,
+      loading,
+      signIn,
+      signOut,
+      isAdmin: user?.role === "ADMIN",
+      isFuncionario: user?.role === "FUNCIONARIO",
+      canAccessRelatorios: user ? canAccessRelatorios(user.role) : false,
+      hasModule,
+    }}>
       {children}
     </AuthContext.Provider>
   );
-}
+};

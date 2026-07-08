@@ -23,7 +23,7 @@ export class AuthService {
       {
         id: user.id,
         role: user.role.nome,
-        modulo: user.role.modulo
+        module: user.role.modulo
       },
       process.env.JWT_SECRET as string,
       { expiresIn: "1d" }
@@ -32,11 +32,11 @@ export class AuthService {
     return {
       token,
       user: {
-        id: user.id,
-        nome: user.nome,
+        id: String(user.id),
+        name: user.nome,
         email: user.email,
         role: user.role.nome,
-        modulo: user.role.modulo
+        module: user.role.modulo
       }
     };
   }

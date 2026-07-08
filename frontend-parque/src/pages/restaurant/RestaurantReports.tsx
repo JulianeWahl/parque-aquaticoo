@@ -1,0 +1,453 @@
+import React, { useEffect, useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import { getLanchoneteDashboard } from "../../api/products";
+import type { LanchoneteDashboard, VendaEntryLanch } from "../../types/product";
+import { formatCurrency } from "../../utils/role";
+import { StatCard } from "../../components/ui/StatCard";
+import {
+  ArrowLeft,
+  ShoppingBag,
+  DollarSign,
+  Clock,
+  CheckCircle2,
+  BarChart3,
+  RefreshCw,
+  Calendar,
+  ChevronDown,
+  User,
+  Tag,
+  QrCode,
+  Banknote,
+  CreditCard,
+  XCircle,
+} from "lucide-react";
+import { cn } from "../../utils/cn";
+
+type Period = "hoje" | "semana" | "mes" | "custom";
+const PERIODS = [
+  { value: "hoje" as Period, label: "Hoje", apiValue: "daily" },
+  { value: "semana" as Period, label: "Esta semana", apiValue: "weekly" },
+  { value: "mes" as Period, label: "Este mês", apiValue: "monthly" },
+  { value: "custom" as Period, label: "Personalizado", apiValue: "custom" },
+];
+const PAY_CONFIG = [
+  {
+    key: "PIX",
+    label: "Pix",
+    icon: <QrCode className="w-3.5 h-3.5" />,
+    color: "bg-sky-500/70",
+  },
+  {
+    key: "CREDITO",
+    label: "Crédito",
+    icon: <CreditCard className="w-3.5 h-3.5" />,
+    color: "bg-violet-500/70",
+  },
+  {
+    key: "DEBITO",
+    label: "Débito",
+    icon: <CreditCard className="w-3.5 h-3.5" />,
+    color: "bg-slate-500/70",
+  },
+  {
+    key: "DINHEIRO",
+    label: "Dinheiro",
+    icon: <Banknote className="w-3.5 h-3.5" />,
+    color: "bg-emerald-500/70",
+  },
+];
+const formatDateTime = (d: string) => {
+  if (!d) return "—";
+  const dt = new Date(d);
+  return (
+    dt.toLocaleDateString("pt-BR") +
+    " " +
+    dt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+  );
+};
+
+const statusBadge = (s: string | null) => {
+  if (s === "APROVADO")
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full font-semibold">
+        <CheckCircle2 className="w-2.5 h-2.5" />
+        Pago
+      </span>
+    );
+  if (s === "PENDENTE")
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] bg-red-500/10 text-red-400 border border-red-500/20 px-2 py-0.5 rounded-full font-semibold">
+        <Clock className="w-2.5 h-2.5" />
+        Não Pago
+      </span>
+    );
+  if (s === "RECUSADO")
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] bg-red-500/10 text-red-400 border border-red-500/20 px-2 py-0.5 rounded-full font-semibold">
+        <XCircle className="w-2.5 h-2.5" />
+        Recusado
+      </span>
+    );
+  return null;
+};
+const payLabel = (m: string | null) =>
+  (
+    ({
+      PIX: "Pix",
+      CREDITO: "Crédito",
+      DEBITO: "Débito",
+      DINHEIRO: "Dinheiro",
+    }) as any
+  )[m ?? ""] ??
+  m ??
+  "—";
+const cozinhaBadge = (s: string | null) => {
+  if (s === "EM_PREPARO")
+    return (
+      <span className="text-[9px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-1.5 py-0.5 rounded font-semibold">
+        Em Preparo
+      </span>
+    );
+  if (s === "ENTREGUE")
+    return (
+      <span className="text-[9px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded font-semibold">
+        Entregue
+      </span>
+    );
+  if (s === "CANCELADO")
+    return (
+      <span className="text-[9px] bg-red-500/10 text-red-400 border border-red-500/20 px-1.5 py-0.5 rounded font-semibold">
+        Cancelado
+      </span>
+    );
+  return null;
+};
+
+export const RestaurantReports: React.FC = () => {
+  const navigate = useNavigate();
+  const [data, setData] = useState<LanchoneteDashboard | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [period, setPeriod] = useState<Period>("hoje");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [showMenu, setShowMenu] = useState(false);
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+
+  const load = useCallback(() => {
+    setLoading(true);
+    setError(false);
+    const p = PERIODS.find((x) => x.value === period);
+    const params =
+      period === "custom" && startDate && endDate
+        ? { startDate, endDate }
+        : { period: p?.apiValue ?? "daily" };
+    getLanchoneteDashboard(params)
+      .then(setData)
+      .catch(() => setError(true))
+      .finally(() => setLoading(false));
+  }, [period, startDate, endDate]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const activePeriodLabel =
+    PERIODS.find((p) => p.value === period)?.label ?? "Hoje";
+  const canceladosCount = data?.pedidos?.cancelados ?? 0;
+
+  return (
+    <div className="h-full overflow-y-auto bg-surf-50 p-5 lg:p-7">
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate("/lanchonete")}
+            className="flex items-center gap-1.5 text-ink-500 hover:text-ink-900 text-sm transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" /> Voltar
+          </button>
+          <div className="w-px h-4 bg-surf-200" />
+          <BarChart3 className="w-5 h-5 text-orange-400" />
+          <h1 className="font-display text-xl font-bold text-ink-900">
+            Relatórios da Lanchonete
+          </h1>
+        </div>
+        <button
+          onClick={load}
+          className="p-2 rounded-xl text-ink-400 hover:text-orange-400 hover:bg-orange-500/10 transition-all"
+        >
+          <RefreshCw className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* Period selector */}
+      <div className="flex flex-wrap items-center gap-3 mb-7">
+        <div className="relative">
+          <button
+            onClick={() => setShowMenu(!showMenu)}
+            className="flex items-center gap-2 bg-surf-50 border border-surf-200 hover:border-orange-500/40 rounded-xl px-4 py-2.5 text-sm text-ink-900 transition-all"
+          >
+            <Calendar className="w-4 h-4 text-orange-400" />
+            {activePeriodLabel}
+            <ChevronDown
+              className={cn(
+                "w-3.5 h-3.5 text-ink-400 transition-transform",
+                showMenu && "rotate-180",
+              )}
+            />
+          </button>
+          {showMenu && (
+            <div className="absolute top-full mt-1.5 left-0 bg-white border border-surf-200 rounded-xl shadow-xl z-20 min-w-[180px] overflow-hidden animate-scale-in">
+              {PERIODS.map((p) => (
+                <button
+                  key={p.value}
+                  onClick={() => {
+                    setPeriod(p.value);
+                    setShowMenu(false);
+                  }}
+                  className={cn(
+                    "w-full text-left px-4 py-2.5 text-sm transition-colors",
+                    period === p.value
+                      ? "bg-orange-500/10 text-orange-400"
+                      : "text-ink-600 hover:bg-surf-50",
+                  )}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        {period === "custom" && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="bg-surf-50 border border-surf-200 rounded-xl px-3 py-2 text-sm text-ink-900 focus:outline-none focus:ring-2 focus:ring-orange-500/40"
+            />
+            <span className="text-ink-400 text-sm">até</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="bg-surf-50 border border-surf-200 rounded-xl px-3 py-2 text-sm text-ink-900 focus:outline-none focus:ring-2 focus:ring-orange-500/40"
+            />
+            <button
+              onClick={load}
+              disabled={!startDate || !endDate}
+              className="px-4 py-2 bg-orange-500 hover:bg-orange-400 disabled:bg-surf-200 disabled:text-ink-400 text-ink-900 text-sm font-semibold rounded-xl transition-all"
+            >
+              Filtrar
+            </button>
+          </div>
+        )}
+      </div>
+
+      {loading ? (
+        <>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-7">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="skeleton h-28 rounded-2xl" />
+            ))}
+          </div>
+          <div className="space-y-3">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="skeleton h-20 rounded-2xl" />
+            ))}
+          </div>
+        </>
+      ) : error ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center gap-3">
+          <p className="text-ink-400 text-sm">
+            Não foi possível carregar os dados.
+          </p>
+          <button
+            onClick={load}
+            className="px-4 py-2 bg-orange-500 hover:bg-orange-400 text-ink-900 text-sm font-semibold rounded-xl"
+          >
+            Tentar novamente
+          </button>
+        </div>
+      ) : data ? (
+        <>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-7">
+            <StatCard
+              label="Pedidos"
+              value={data.quantidadeVendas ?? 0}
+              icon={<ShoppingBag className="w-4 h-4" />}
+              accent="amber"
+            />
+            <StatCard
+              label="Faturamento"
+              value={formatCurrency(data.total ?? 0)}
+              icon={<DollarSign className="w-4 h-4" />}
+              accent="green"
+            />
+            <StatCard
+              label="Entregues"
+              value={data.pedidos?.entregues ?? 0}
+              icon={<CheckCircle2 className="w-4 h-4" />}
+              accent="green"
+            />
+            <StatCard
+              label="Cancelados"
+              value={canceladosCount}
+              icon={<XCircle className="w-4 h-4" />}
+              accent={canceladosCount > 0 ? "red" : "slate"}
+            />
+          </div>
+          <div className="flex items-center gap-3 mb-5 flex-wrap">
+            {(data.pedidos?.emPreparo ?? 0) > 0 && (
+              <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2">
+                <Clock className="w-3.5 h-3.5 text-amber-400" />
+                <span className="text-amber-400 text-sm font-semibold">
+                  {data.pedidos.emPreparo} em preparo
+                </span>
+              </div>
+            )}
+          </div>
+          {(data.quantidadeVendas ?? 0) > 0 && (
+            <div className="bg-white border border-surf-200 rounded-2xl p-5 mb-5">
+              <h2 className="font-display font-bold text-ink-900 text-sm mb-4 uppercase tracking-wide">
+                Formas de Pagamento (somente pagos)
+              </h2>
+              <div className="space-y-3">
+                {PAY_CONFIG.map(({ key, label, icon, color }) => {
+                  const value = (data.pagamentos as any)?.[key] ?? 0;
+                  if (value === 0) return null;
+                  const pct =
+                    data.total > 0 ? Math.round((value / data.total) * 100) : 0;
+                  return (
+                    <div key={key}>
+                      <div className="flex items-center justify-between text-sm mb-1.5">
+                        <div className="flex items-center gap-2 text-ink-500">
+                          {icon}
+                          {label}
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-ink-400 text-xs">{pct}%</span>
+                          <span className="text-ink-900 font-semibold">
+                            {formatCurrency(value)}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="h-1.5 bg-surf-200 rounded-full overflow-hidden">
+                        <div
+                          className={cn(
+                            "h-full rounded-full transition-all duration-700",
+                            color,
+                          )}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          <h2 className="font-display font-bold text-ink-900 text-base mb-3">
+            Pedidos Realizados
+            <span className="text-ink-400 font-normal text-sm ml-2">
+              ({data.vendas?.length ?? 0})
+            </span>
+          </h2>
+
+          {(data.vendas?.length ?? 0) === 0 ? (
+            <div className="text-center py-10 bg-white border border-surf-100 rounded-2xl">
+              <ShoppingBag className="w-10 h-10 text-ink-300 mx-auto mb-2" />
+              <p className="text-ink-400 text-sm">Nenhum pedido no período</p>
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              {(data.vendas ?? []).map((venda: VendaEntryLanch) => (
+                <div
+                  key={venda.id}
+                  className="bg-white border border-surf-200 rounded-2xl overflow-hidden hover:border-orange-500/20 transition-all"
+                >
+                  <button
+                    onClick={() =>
+                      setExpandedId(expandedId === venda.id ? null : venda.id)
+                    }
+                    className="w-full flex items-center justify-between px-5 py-4 text-left"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-semibold text-ink-900 text-sm">
+                          Pedido #{venda.id}
+                        </p>
+                        {statusBadge(venda.statusPagamento)}
+                      </div>
+                      <div className="flex items-center gap-3 mt-1 flex-wrap">
+                        {venda.nomeCliente && (
+                          <span className="text-ink-400 text-xs flex items-center gap-1">
+                            <User className="w-3 h-3" />
+                            {venda.nomeCliente}
+                          </span>
+                        )}
+                        {venda.usuario && (
+                          <span className="text-ink-400 text-xs">
+                            Op: {venda.usuario}
+                          </span>
+                        )}
+                        <span className="text-ink-300 text-xs">
+                          {formatDateTime(venda.data)}
+                        </span>
+                      </div>
+                      <p className="text-ink-400 text-xs mt-0.5">
+                        {venda.itens
+                          ?.map((i) => `${i.quantidade}× ${i.nome}`)
+                          .join(", ")}
+                      </p>
+                    </div>
+                    <div className="text-right flex-shrink-0 ml-4">
+                      <p className="font-display font-bold text-emerald-400 text-lg">
+                        {formatCurrency(venda.total)}
+                      </p>
+                      <p className="text-ink-400 text-xs mt-0.5">
+                        {payLabel(venda.metodoPagamento)}
+                      </p>
+                      {venda.cupomAplicado && (
+                        <p className="text-ink-400 text-[10px] flex items-center gap-1 justify-end mt-0.5">
+                          <Tag className="w-2.5 h-2.5" />
+                          {venda.cupomAplicado}
+                        </p>
+                      )}
+                    </div>
+                  </button>
+                  {expandedId === venda.id && (
+                    <div className="px-5 pb-4 border-t border-surf-200 pt-3 animate-fade-in">
+                      <p className="text-xs text-ink-400 uppercase tracking-widest mb-2">
+                        Itens
+                      </p>
+                      <div className="space-y-1.5">
+                        {venda.itens?.map((item, i) => (
+                          <div
+                            key={i}
+                            className="flex items-center justify-between text-sm"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="text-ink-600">
+                                {item.quantidade}× {item.nome}
+                              </span>
+                              {cozinhaBadge(item.statusCozinha)}
+                            </div>
+                            <span className="text-ink-500">
+                              {formatCurrency(item.subtotal)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      ) : null}
+    </div>
+  );
+};

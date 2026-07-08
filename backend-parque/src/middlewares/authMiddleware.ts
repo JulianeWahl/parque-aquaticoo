@@ -4,7 +4,7 @@ import jwt from "jsonwebtoken";
 interface TokenPayload {
   id: number;
   role: "ADMIN" | "FUNCIONARIO";
-  modulo: "ENTRADA" | "LANCHONETE";
+  module: "ENTRADA" | "LANCHONETE";
 }
 
 export function authMiddleware(

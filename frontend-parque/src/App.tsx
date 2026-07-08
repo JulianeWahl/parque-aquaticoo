@@ -1,7 +1,17 @@
+import React from "react";
+import { BrowserRouter } from "react-router-dom";
+import { AuthProvider } from "./contexts/AuthContext";
+import { ToastProvider } from "./components/ui/Toast";
+import { AppRoutes } from "./routes/AppRoutes";
+
 export default function App() {
   return (
-    <div className="text-red-500 text-3xl">
-      Frontend funcionando 🚀
-    </div>
+    <BrowserRouter>
+      <AuthProvider>
+        <ToastProvider>
+          <AppRoutes />
+        </ToastProvider>
+      </AuthProvider>
+    </BrowserRouter>
   );
 }

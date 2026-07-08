@@ -1,5 +1,6 @@
 import { moduleMiddleware } from "../middlewares/moduleMiddleware";
 import { Router } from "express";
+import { prisma } from "../lib/prisma";
 
 import { UserController } from "../controllers/userController";
 import { AuthController } from "../controllers/authController";
@@ -111,86 +112,328 @@ const dashboardRestaurant = new DashboardRestaurantController();
    AUTH
 =========================== */
 
-router.post("/usuarios", userController.create);
+router.post(
+  "/usuarios",
+  authMiddleware,
+  roleMiddleware("ADMIN"),
+  userController.create
+);
+
 router.post("/login", authController.login);
 
-router.get("/me", authMiddleware, (req, res) => {
-  return res.json(req.user);
+/* GET USER LOGADO */
+router.get("/me", authMiddleware, async (req, res) => {
+  try {
+    const user = await prisma.usuario.findUnique({
+      where: { id: req.user?.id },
+      include: { role: true }
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        error: "Usuário não encontrado"
+      });
+    }
+
+    return res.json({
+      user: {
+        id: String(user.id),
+        name: user.nome,
+        email: user.email,
+        role: user.role.nome,
+        module: user.role.modulo
+      }
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      error: error.message
+    });
+  }
+});
+
+/* GET ROLES */
+router.get("/roles", authMiddleware, roleMiddleware("ADMIN"), async (req, res) => {
+  try {
+    const roles = await prisma.role.findMany();
+    return res.json(roles);
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message });
+  }
 });
 
 /* ===========================
    COUPONS (ADMIN)
 =========================== */
 
-router.post("/coupons", authMiddleware, roleMiddleware("ADMIN"), createCoupon.handle);
-router.get("/coupons", authMiddleware, findAllCoupon.handle);
-router.get("/coupons/:id", authMiddleware, findByIdCoupon.handle);
-router.patch("/coupons/:id", authMiddleware, roleMiddleware("ADMIN"), updateCoupon.handle);
-router.delete("/coupons/:id", authMiddleware, roleMiddleware("ADMIN"), deleteCoupon.handle);
+router.post(
+  "/coupons",
+  authMiddleware,
+  roleMiddleware("ADMIN"),
+  createCoupon.handle
+);
+
+router.get(
+  "/coupons",
+  authMiddleware,
+  findAllCoupon.handle
+);
+
+router.get(
+  "/coupons/:id",
+  authMiddleware,
+  findByIdCoupon.handle
+);
+
+router.patch(
+  "/coupons/:id",
+  authMiddleware,
+  roleMiddleware("ADMIN"),
+  updateCoupon.handle
+);
+
+router.delete(
+  "/coupons/:id",
+  authMiddleware,
+  roleMiddleware("ADMIN"),
+  deleteCoupon.handle
+);
 
 /* ===========================
    TICKETS
 =========================== */
 
-router.post("/tickets",authMiddleware, roleMiddleware("ADMIN"), moduleMiddleware("ENTRADA"), createTicket.handle);
-router.get("/tickets", authMiddleware, moduleMiddleware("ENTRADA"), findAllTicket.handle);
-router.get("/tickets/:id", authMiddleware, moduleMiddleware("ENTRADA"), findByIdTicket.handle);
-router.patch("/tickets/:id", authMiddleware,roleMiddleware("ADMIN"), moduleMiddleware("ENTRADA"), updateTicket.handle);
-router.delete("/tickets/:id", authMiddleware, roleMiddleware("ADMIN"), moduleMiddleware("ENTRADA"), deleteTicket.handle);
+router.post(
+  "/tickets",
+  authMiddleware,
+  roleMiddleware("ADMIN"),
+  moduleMiddleware("ENTRADA"),
+  createTicket.handle
+);
 
-router.post("/ticket-sales", authMiddleware, moduleMiddleware("ENTRADA"), createTicketSale.handle);
+router.get(
+  "/tickets",
+  authMiddleware,
+  moduleMiddleware("ENTRADA"),
+  findAllTicket.handle
+);
+
+router.get(
+  "/tickets/:id",
+  authMiddleware,
+  moduleMiddleware("ENTRADA"),
+  findByIdTicket.handle
+);
+
+router.patch(
+  "/tickets/:id",
+  authMiddleware,
+  roleMiddleware("ADMIN"),
+  moduleMiddleware("ENTRADA"),
+  updateTicket.handle
+);
+
+router.delete(
+  "/tickets/:id",
+  authMiddleware,
+  roleMiddleware("ADMIN"),
+  moduleMiddleware("ENTRADA"),
+  deleteTicket.handle
+);
+
+router.post(
+  "/ticket-sales",
+  authMiddleware,
+  moduleMiddleware("ENTRADA"),
+  createTicketSale.handle
+);
 
 /* ===========================
    CATEGORIES / BRANDS
 =========================== */
 
-router.post("/categories", authMiddleware, roleMiddleware("ADMIN"), createCategory.handle);
-router.get("/categories", authMiddleware, findAllCategory.handle);
-router.patch("/categories/:id", authMiddleware, roleMiddleware("ADMIN"), updateCategory.handle);
-router.delete("/categories/:id", authMiddleware, roleMiddleware("ADMIN"), deleteCategory.handle);
+router.post(
+  "/categories",
+  authMiddleware,
+  roleMiddleware("ADMIN"),
+  createCategory.handle
+);
 
-router.post("/brands", authMiddleware, roleMiddleware("ADMIN"), createBrand.handle);
-router.get("/brands", authMiddleware, findAllBrand.handle);
-router.get("/brands/:id", authMiddleware, findByIdBrand.handle);
-router.patch("/brands/:id", authMiddleware, roleMiddleware("ADMIN"), updateBrand.handle);
-router.delete("/brands/:id", authMiddleware, roleMiddleware("ADMIN"), deleteBrand.handle);
+router.get(
+  "/categories",
+  authMiddleware,
+  findAllCategory.handle
+);
+
+router.patch(
+  "/categories/:id",
+  authMiddleware,
+  roleMiddleware("ADMIN"),
+  updateCategory.handle
+);
+
+router.delete(
+  "/categories/:id",
+  authMiddleware,
+  roleMiddleware("ADMIN"),
+  deleteCategory.handle
+);
+
+router.post(
+  "/brands",
+  authMiddleware,
+  roleMiddleware("ADMIN"),
+  createBrand.handle
+);
+
+router.get(
+  "/brands",
+  authMiddleware,
+  findAllBrand.handle
+);
+
+router.get(
+  "/brands/:id",
+  authMiddleware,
+  findByIdBrand.handle
+);
+
+router.patch(
+  "/brands/:id",
+  authMiddleware,
+  roleMiddleware("ADMIN"),
+  updateBrand.handle
+);
+
+router.delete(
+  "/brands/:id",
+  authMiddleware,
+  roleMiddleware("ADMIN"),
+  deleteBrand.handle
+);
 
 /* ===========================
    PRODUCTS
 =========================== */
 
-router.post("/products", authMiddleware, roleMiddleware("ADMIN"), moduleMiddleware("LANCHONETE"), createProduct.handle);
-router.get("/products", authMiddleware, moduleMiddleware("LANCHONETE"), findAllProduct.handle);
+router.post(
+  "/products",
+  authMiddleware,
+  roleMiddleware("ADMIN"),
+  moduleMiddleware("LANCHONETE"),
+  createProduct.handle
+);
 
-router.get("/products/low-stock", authMiddleware, roleMiddleware("ADMIN"), moduleMiddleware("LANCHONETE"), lowStock.handle);
-router.get("/products/out-stock", authMiddleware, roleMiddleware("ADMIN"), moduleMiddleware("LANCHONETE"), outStock.handle);
+router.get(
+  "/products",
+  authMiddleware,
+  moduleMiddleware("LANCHONETE"),
+  findAllProduct.handle
+);
 
-router.get("/products/:id", authMiddleware, moduleMiddleware("LANCHONETE"), findByIdProduct.handle);
-router.patch("/products/:id", authMiddleware, roleMiddleware("ADMIN"), moduleMiddleware("LANCHONETE"), updateProduct.handle);
-router.delete("/products/:id", authMiddleware, roleMiddleware("ADMIN"), moduleMiddleware("LANCHONETE"), deleteProduct.handle);
+router.get(
+  "/products/low-stock",
+  authMiddleware,
+  roleMiddleware("ADMIN"),
+  moduleMiddleware("LANCHONETE"),
+  lowStock.handle
+);
+
+router.get(
+  "/products/out-stock",
+  authMiddleware,
+  roleMiddleware("ADMIN"),
+  moduleMiddleware("LANCHONETE"),
+  outStock.handle
+);
+
+router.get(
+  "/products/:id",
+  authMiddleware,
+  moduleMiddleware("LANCHONETE"),
+  findByIdProduct.handle
+);
+
+router.patch(
+  "/products/:id",
+  authMiddleware,
+  roleMiddleware("ADMIN"),
+  moduleMiddleware("LANCHONETE"),
+  updateProduct.handle
+);
+
+router.delete(
+  "/products/:id",
+  authMiddleware,
+  roleMiddleware("ADMIN"),
+  moduleMiddleware("LANCHONETE"),
+  deleteProduct.handle
+);
 
 /* ESTOQUE */
-router.post("/products/:id/restock", authMiddleware, roleMiddleware("ADMIN"), moduleMiddleware("LANCHONETE"), restockProduct.handle);
-router.get("/stock/history", authMiddleware, roleMiddleware("ADMIN"), moduleMiddleware("LANCHONETE"), stockHistory.handle);
+
+router.post(
+  "/products/:id/restock",
+  authMiddleware,
+  roleMiddleware("ADMIN"),
+  moduleMiddleware("LANCHONETE"),
+  restockProduct.handle
+);
+
+router.get(
+  "/stock/history",
+  authMiddleware,
+  roleMiddleware("ADMIN"),
+  moduleMiddleware("LANCHONETE"),
+  stockHistory.handle
+);
 
 /* ===========================
    RESTAURANT SALES
 =========================== */
 
-router.post("/restaurant-sales", authMiddleware, moduleMiddleware("LANCHONETE"), createRestaurantSale.handle);
+router.post(
+  "/restaurant-sales",
+  authMiddleware,
+  moduleMiddleware("LANCHONETE"),
+  createRestaurantSale.handle
+);
 
 /* ===========================
    KITCHEN
 =========================== */
 
-router.get("/kitchen/orders", authMiddleware, moduleMiddleware("LANCHONETE"), findKitchen.handle);
-router.patch("/kitchen/orders/:id/status", authMiddleware, moduleMiddleware("LANCHONETE"), updateKitchen.handle);
+router.get(
+  "/kitchen/orders",
+  authMiddleware,
+  moduleMiddleware("LANCHONETE"),
+  findKitchen.handle
+);
+
+router.patch(
+  "/kitchen/orders/:id/status",
+  authMiddleware,
+  moduleMiddleware("LANCHONETE"),
+  updateKitchen.handle
+);
 
 /* ===========================
    DASHBOARD (ADMIN)
 =========================== */
 
-router.get("/dashboard/entrada", authMiddleware, roleMiddleware("ADMIN"), moduleMiddleware("ENTRADA"), dashboardEntry.handle);
-router.get("/dashboard/restaurant", authMiddleware, roleMiddleware("ADMIN"), moduleMiddleware("LANCHONETE"), dashboardRestaurant.handle);
+router.get(
+  "/dashboard/entrada",
+  authMiddleware,
+  roleMiddleware("ADMIN"),
+  moduleMiddleware("ENTRADA"),
+  dashboardEntry.handle
+);
+
+router.get(
+  "/dashboard/restaurant",
+  authMiddleware,
+  roleMiddleware("ADMIN"),
+  moduleMiddleware("LANCHONETE"),
+  dashboardRestaurant.handle
+);
 
 export default router;

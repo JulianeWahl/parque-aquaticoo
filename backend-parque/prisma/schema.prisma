@@ -120,6 +120,7 @@ model VendaProduto {
   produtoId  Int
   produto    Produto        @relation(fields: [produtoId], references: [id])
   quantidade Int
+  observacao String?
   pedido     PedidoCozinha?
 }
 
@@ -129,6 +130,7 @@ model PedidoCozinha {
   vendaProduto   VendaProduto @relation(fields: [vendaProdutoId], references: [id])
   status         PedidoStatus
   quantidade     Int
+  observacao     String?
   data           DateTime     @default(now())
 }
 
