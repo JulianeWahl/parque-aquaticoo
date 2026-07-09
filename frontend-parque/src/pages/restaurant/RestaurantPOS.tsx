@@ -410,7 +410,7 @@ export const RestaurantPOS: React.FC = () => {
       </div>
 
       <div className="w-px bg-surf-50 hidden lg:block flex-shrink-0" />
-      <div className="w-[360px] flex-shrink-0 flex flex-col bg-white border-l border-surf-200">
+      <div className="w-[360px] flex-shrink-0 flex flex-col bg-white border-l border-surf-200 h-full">
         <div className="px-6 py-5 border-b border-surf-200">
           <h2 className="font-display text-xl font-bold text-ink-900 flex items-center gap-2">
             <ShoppingBag className="w-5 h-5 text-orange-400" />

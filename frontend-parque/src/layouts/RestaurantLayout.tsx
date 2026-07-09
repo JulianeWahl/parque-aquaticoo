@@ -31,7 +31,7 @@ export const RestaurantLayout: React.FC = () => {
 
   return (
     <div
-      className="min-h-screen flex flex-col"
+      className="h-screen flex flex-col overflow-hidden"
       style={{ background: "#f5faff" }}
     >
       <header
