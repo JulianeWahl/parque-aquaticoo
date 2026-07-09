@@ -2,7 +2,7 @@
 
 <img src="docs/screenshots/Parque.png" alt="Parque Aquático Olho D'Água" width="120" />
 
-# 🌊 Parque Aquático Olho D'Água
+# Parque Aquático Olho D'Água
 
 ### Sistema de Gestão Operacional
 
@@ -16,13 +16,16 @@
 > desenvolvido para o Parque Aquático Olho D'Água — Canoinhas/SC.  
 > **Sistema ERP Web para Gestão de Parque Aquático — Engenharia de Software**
 
+### Acesse a demonstração
+**Sistema Online:** https://parque-aquaticoo.vercel.app/
+
 [Demonstração](#-demonstração) · [Funcionalidades](#-funcionalidades) · [Instalação](#-instalação) · [Tecnologias](#-tecnologias)
 
 </div>
 
 ---
 
-## 📸 Demonstração
+## Demonstração
 
 |                Login                 |             Entrada — PDV              |                Lanchonete — PDV                |
 | :----------------------------------: | :------------------------------------: | :--------------------------------------------: |
@@ -38,9 +41,9 @@
 
 ---
 
-## ✨ Funcionalidades
+## Funcionalidades
 
-### 🎟️ Módulo Entrada
+### Módulo Entrada
 
 - Venda de ingressos (Adulto, Criança, Menor de 5 anos)
 - Aplicação de cupons de desconto
@@ -48,7 +51,7 @@
 - Relatórios de vendas com filtro por período
 - Dashboard de faturamento (somente pagamentos aprovados)
 
-### 🍔 Módulo Lanchonete
+### Módulo Lanchonete
 
 - PDV com catálogo de produtos por categoria
 - Validação de estoque em tempo real
@@ -56,14 +59,14 @@
 - Cupons de desconto
 - Observações por item
 
-### 👨‍🍳 Cozinha
+### Cozinha
 
 - Painel de pedidos em tempo real (atualização automática a cada 20s)
 - Apenas produtos com `precisaPreparo = true` aparecem na cozinha
 - Ações: **Entregue** e **Cancelar** (com restauração automática de estoque)
 - **Impressão automática** em impressora térmica Bluetooth 58mm via Web Bluetooth API
 
-### 📦 Estoque
+### Estoque
 
 - Cadastro de produtos com categorias e marcas
 - Autocomplete para nomes e marcas existentes
@@ -71,14 +74,14 @@
 - Reposição de estoque com histórico
 - Soft delete (preserva histórico de vendas)
 
-### 📊 Relatórios
+### Relatórios
 
 - Vendas por dia / semana / mês / período personalizado
 - Detalhamento por venda: cliente, itens, operador, forma de pagamento
 - Breakdown de faturamento por forma de pagamento
 - Status visual: Pago (verde) · Não Pago (vermelho) · Cancelado (vermelho)
 
-### 🔐 Autenticação
+### Autenticação
 
 - Login por módulo (ENTRADA ou LANCHONETE)
 - Papéis: ADMIN e FUNCIONARIO
@@ -86,25 +89,25 @@
 
 ---
 
-## 🏗️ Arquitetura
+## Arquitetura
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    FRONTEND (React)                      │
+│                    FRONTEND (React)                     │
 │  ┌──────────┐  ┌──────────────┐  ┌────────────────────┐ │
-│  │  Entrada │  │  Lanchonete  │  │ Admin / Relatórios  │ │
+│  │  Entrada │  │  Lanchonete  │  │ Admin / Relatórios │ │
 │  │  (azul)  │  │  (laranja)   │  │                    │ │
 │  └──────────┘  └──────────────┘  └────────────────────┘ │
-│                     Axios (REST)                         │
+│                     Axios (REST)                        │
 └────────────────────────┬────────────────────────────────┘
                          │ HTTP / JSON
 ┌────────────────────────▼────────────────────────────────┐
-│                  BACKEND (Node.js + Express)              │
-│   Routes → Middlewares → Controllers → Services → Prisma │
+│                  BACKEND (Node.js + Express)            │
+│   Routes → Middlewares → Controllers → Services → Prisma│
 └────────────────────────┬────────────────────────────────┘
                          │ ORM
 ┌────────────────────────▼────────────────────────────────┐
-│                    PostgreSQL                             │
+│                    PostgreSQL                           │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -122,7 +125,7 @@ Operador seleciona produtos
 
 ---
 
-## 🛠️ Tecnologias
+## Tecnologias
 
 ### Frontend
 
@@ -150,7 +153,7 @@ Operador seleciona produtos
 
 ---
 
-## 📁 Estrutura do Projeto
+## Estrutura do Projeto
 
 ```
 parque-aquatico/
@@ -190,7 +193,7 @@ parque-aquatico/
 
 ---
 
-## 🚀 Instalação
+## Instalação
 
 ### Pré-requisitos
 
@@ -255,7 +258,7 @@ Os ingressos padrão (Adulto, Criança, Menor de 5 anos) são criados
 
 ---
 
-## 🖨️ Impressora Térmica Bluetooth
+## Impressora Térmica Bluetooth
 
 O sistema suporta impressão automática de tickets na cozinha via impressora Bluetooth 58mm.
 
@@ -274,7 +277,7 @@ O sistema suporta impressão automática de tickets na cozinha via impressora Bl
 
 ---
 
-## 🌐 Deploy
+## Deploy
 
 | Serviço                        | Uso                    | Plano gratuito    |
 | ------------------------------ | ---------------------- | ----------------- |
@@ -284,7 +287,7 @@ O sistema suporta impressão automática de tickets na cozinha via impressora Bl
 
 ---
 
-## 👨‍💻 Autor
+## Autora
 
 **Juliane Rafaeli Wahl Rocha**  
 Curso de Engenharia de Software
@@ -295,7 +298,7 @@ Faculdade UGV - Centro Universitário — União da Vitória/PR
 
 ---
 
-## 📄 Licença
+## Licença
 
 Este projeto foi desenvolvido como Trabalho de Conclusão de Curso (TCC).  
 Todos os direitos reservados © 2026
