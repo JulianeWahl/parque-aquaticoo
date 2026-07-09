@@ -255,7 +255,7 @@ router.post(
 router.post(
   "/categories",
   authMiddleware,
-  roleMiddleware("ADMIN"),
+  moduleMiddleware("LANCHONETE"),
   createCategory.handle
 );
 
@@ -282,7 +282,7 @@ router.delete(
 router.post(
   "/brands",
   authMiddleware,
-  roleMiddleware("ADMIN"),
+  moduleMiddleware("LANCHONETE"),
   createBrand.handle
 );
 
@@ -314,12 +314,12 @@ router.delete(
 
 /* ===========================
    PRODUCTS
+   (funcionário pode criar/editar/repor estoque)
 =========================== */
 
 router.post(
   "/products",
   authMiddleware,
-  roleMiddleware("ADMIN"),
   moduleMiddleware("LANCHONETE"),
   createProduct.handle
 );
@@ -334,7 +334,6 @@ router.get(
 router.get(
   "/products/low-stock",
   authMiddleware,
-  roleMiddleware("ADMIN"),
   moduleMiddleware("LANCHONETE"),
   lowStock.handle
 );
@@ -342,7 +341,6 @@ router.get(
 router.get(
   "/products/out-stock",
   authMiddleware,
-  roleMiddleware("ADMIN"),
   moduleMiddleware("LANCHONETE"),
   outStock.handle
 );
@@ -357,7 +355,6 @@ router.get(
 router.patch(
   "/products/:id",
   authMiddleware,
-  roleMiddleware("ADMIN"),
   moduleMiddleware("LANCHONETE"),
   updateProduct.handle
 );
@@ -370,12 +367,11 @@ router.delete(
   deleteProduct.handle
 );
 
-/* ESTOQUE */
+/* ESTOQUE (funcionário pode repor) */
 
 router.post(
   "/products/:id/restock",
   authMiddleware,
-  roleMiddleware("ADMIN"),
   moduleMiddleware("LANCHONETE"),
   restockProduct.handle
 );
@@ -383,7 +379,6 @@ router.post(
 router.get(
   "/stock/history",
   authMiddleware,
-  roleMiddleware("ADMIN"),
   moduleMiddleware("LANCHONETE"),
   stockHistory.handle
 );
