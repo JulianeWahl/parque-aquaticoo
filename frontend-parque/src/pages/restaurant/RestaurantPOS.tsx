@@ -309,7 +309,7 @@ export const RestaurantPOS: React.FC = () => {
                     {formatCurrency(product.price)}
                   </p>
                   <div className="flex items-center gap-1 mt-1.5">
-                    <Package className="w-3 h-3 text-ink-300 flex-shrink-0" />
+                    <Package className="w-3.5 h-3.5 text-ink-500 flex-shrink-0" />
                     <span
                       className={cn(
                         "text-sm",
@@ -319,7 +319,7 @@ export const RestaurantPOS: React.FC = () => {
                             ? "text-amber-400"
                             : lowStock
                               ? "text-orange-400"
-                              : "text-ink-300",
+                              : "text-ink-600 font-bold",
                       )}
                     >
                       {outOfStock
